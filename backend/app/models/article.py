@@ -10,6 +10,7 @@ from app.db.database import Base
 if TYPE_CHECKING:
     from app.models.source import Source
     from app.models.article_category import ArticleCategory
+    from app.models.article_topic import ArticleTopic
 
 
 class Article(Base):
@@ -28,3 +29,4 @@ class Article(Base):
 
     source: Mapped["Source"] = relationship(back_populates="articles")  
     category_links: Mapped[list["ArticleCategory"]] = relationship(back_populates="article", cascade="all, delete-orphan")
+    topic_links: Mapped[list["ArticleTopic"]] = relationship(back_populates="article", cascade="all, delete-orphan")
