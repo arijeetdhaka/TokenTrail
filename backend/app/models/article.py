@@ -9,6 +9,7 @@ from app.db.database import Base
 
 if TYPE_CHECKING:
     from app.models.source import Source
+    from app.models.article_category import ArticleCategory
 
 
 class Article(Base):
@@ -25,4 +26,5 @@ class Article(Base):
     content_hash: Mapped[str] = mapped_column(String(64), unique=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    source: Mapped["Source"] = relationship(back_populates="articles")
+    source: Mapped["Source"] = relationship(back_populates="articles")  
+    category_links: Mapped[list["ArticleCategory"]] = relationship(back_populates="article", cascade="all, delete-orphan")
