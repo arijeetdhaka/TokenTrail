@@ -7,6 +7,8 @@ from app.db.database import Base
 
 if TYPE_CHECKING:
     from app.models.article_topic import ArticleTopic
+    from app.models.explore_item import ExploreItem
+    from app.models.snippet import Snippet
 
 
 class Topic(Base):
@@ -19,3 +21,5 @@ class Topic(Base):
     description: Mapped[str | None] = mapped_column(Text)
 
     article_links: Mapped[list["ArticleTopic"]] = relationship(back_populates="topic")
+    snippets: Mapped[list["Snippet"]] = relationship(back_populates="topic")
+    explore_items: Mapped[list["ExploreItem"]] = relationship(back_populates="topic")
