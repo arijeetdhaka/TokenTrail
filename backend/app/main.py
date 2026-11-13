@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
-from app.routers import categories, topics
+from app.routers import articles, categories, topics
 
 app = FastAPI(title="TokenTrail API", version="0.1.0")
 
@@ -22,5 +22,6 @@ def health(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "connected"}
 
+app.include_router(articles.router)
 app.include_router(categories.router)
 app.include_router(topics.router)
