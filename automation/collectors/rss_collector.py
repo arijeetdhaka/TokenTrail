@@ -9,7 +9,11 @@ def collect_rss_news(feed_url, source_name):
     articles = []
 
     try:
-        response = httpx.get(feed_url, timeout=20)
+        response = httpx.get(
+          feed_url,
+          timeout=20,
+          follow_redirects=True
+        )
         response.raise_for_status()
 
         feed = feedparser.parse(response.content)
@@ -36,24 +40,77 @@ def collect_rss_news(feed_url, source_name):
 
     return articles
 
+# removing duplicates news
+def remove_duplicates(articles):
+    unique_articles = []
+    seen_urls = set()
+
+    for article in articles:
+        url = article["url"]
+
+        if url and url not in seen_urls:
+            unique_articles.append(article)
+            seen_urls.add(url)
+
+    return unique_articles
+
+# Data Cleaning and Normalization.
+def normalize_articles(articles):
+    normalized_articles = []
+
+    for article in articles:
+        normalized_article = {
+            "title": article.get("title", "").strip(),
+            "source": article.get("source", "").strip(),
+            "url": article.get("url", "").strip(),
+            "published_at": article.get("published_at", ""),
+            "summary": article.get("summary", "").strip(),
+            "collected_at": article.get("collected_at", "")
+        }
+
+        if normalized_article["title"] and normalized_article["url"]:
+            normalized_articles.append(normalized_article)
+
+    return normalized_articles
+
+
 
 if __name__ == "__main__":
 
-    feed_url = "https://openai.com/news/rss.xml"
+    rss_sources = [
+        {
+            "name": "OpenAI",
+            "url": "https://openai.com/news/rss.xml"
+        },
+        {
+            "name": "Google AI",
+            "url": "https://blog.research.google/feeds/posts/default"
+        }
+    ]
 
-    news = collect_rss_news(feed_url, "OpenAI")
+    all_news = []
+
+    for source in rss_sources:
+        news = collect_rss_news(source["url"], source["name"])
+        all_news.extend(news)
+
+    print("\nArticles before removing duplicates:", len(all_news))
+    all_news = remove_duplicates(all_news)
+    print("Articles after removing duplicates:", len(all_news))
+
+    all_news = normalize_articles(all_news)
+    print("Valid articles after normalization:", len(all_news))
+
+    print("\nTotal articles collected:", len(all_news))
+
     data_folder = Path(__file__).resolve().parent.parent / "data"
+
     data_folder.mkdir(parents=True, exist_ok=True)
+
     output_file = data_folder / "raw_news.json"
+
     with open(output_file, "w", encoding="utf-8") as file:
-        json.dump(news, file, indent=4, ensure_ascii=False)
-    print(f"News saved successfully at: {output_file}")
+        json.dump(all_news, file, indent=4, ensure_ascii=False)
 
-    print("\n========== TOKENTRAIL AI NEWS ==========\n")
+    print("News saved successfully at:", output_file)
 
-    for article in news[:5]:
-        print("Title:", article["title"])
-        print("Source:", article["source"])
-        print("URL:", article["url"])
-        print("Published:", article["published_at"])
-        print("-" * 60)
