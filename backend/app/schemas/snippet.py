@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from uuid import UUID
 
@@ -16,8 +15,8 @@ class SnippetResponse(BaseModel):
     difficulty: str | None = None
     estimated_read_time: int | None = None
     is_published: bool
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,3 +24,11 @@ class SnippetResponse(BaseModel):
 class SnippetListResponse(BaseModel):
     message: str
     data: list[SnippetResponse]
+    total: int | None = None
+    limit: int | None = None
+    offset: int | None = None
+
+
+class SnippetDetailResponse(BaseModel):
+    message: str
+    data: SnippetResponse
