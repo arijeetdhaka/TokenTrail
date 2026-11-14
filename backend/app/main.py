@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
-
+from app.routers import headlines
 app = FastAPI(title="TokenTrail API", version="0.1.0")
-
+app.include_router(headlines.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.frontend_origins,
