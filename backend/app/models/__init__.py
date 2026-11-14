@@ -1,0 +1,10 @@
+from app.models.category import Category  # noqa: F401
+from app.models.source import Source  # noqa: F401
+from app.models.article import Article  # noqa: F401
+from app.models.article_category import ArticleCategory  # noqa: F401
+from app.models.topic import Topic  # noqa: F401
+from app.models.article_topic import ArticleTopic  # noqa: F401
+from app.models.snippet import Snippet  # noqa: F401
+from app.models.explore_item import ExploreItem  # noqa: F401
+from app.models.user import User  # noqa: F401
+from app.models.user_progress import UserProgress  # noqa: F401

@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -219,6 +219,23 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# ---------- TokenTrail additions ----------
+# Frontend (React/Vite)
+node_modules/
+
+# Other env files like .env.local (keep the example committed)
+.env.*
+!.env.example
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Large ML model weights (GitHub rejects files over 100 MB)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
 
 # Python
 __pycache__/
