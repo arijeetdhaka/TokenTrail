@@ -1,4 +1,7 @@
+
 import json
+import time
+import logging
 from pathlib import Path
 import httpx
 import feedparser
@@ -8,39 +11,66 @@ from datetime import datetime, timezone
 def collect_rss_news(feed_url, source_name):
     articles = []
 
-    try:
-        response = httpx.get(
-          feed_url,
-          timeout=20,
-          follow_redirects=True
-        )
-        response.raise_for_status()
+    max_attempts = 3
 
-        feed = feedparser.parse(response.content)
+    for attempt in range(1, max_attempts + 1):
 
-        for entry in feed.entries:
-            article = {
-                "title": entry.get("title", "No title"),
-                "source": source_name,
-                "url": entry.get("link", ""),
-                "published_at": entry.get("published", ""),
-                "summary": entry.get("summary", ""),
-                "collected_at": datetime.now(timezone.utc).isoformat()
-            }
+        try:
+            response = httpx.get(
+                feed_url,
+                timeout=20,
+                follow_redirects=True
+            )
 
-            articles.append(article)
+            response.raise_for_status()
 
-        print(f"Collected {len(articles)} articles from {source_name}")
+            feed = feedparser.parse(response.content)
 
-    except httpx.HTTPError as error:
-        print(f"Network error while collecting {source_name}: {error}")
+            for entry in feed.entries:
+                article = {
+                    "title": entry.get("title", "No title"),
+                    "source": source_name,
+                    "url": entry.get("link", ""),
+                    "published_at": entry.get("published", ""),
+                    "summary": entry.get("summary", ""),
+                    "collected_at": datetime.now(timezone.utc).isoformat()
+                }
 
-    except Exception as error:
-        print(f"Unexpected error: {error}")
+                articles.append(article)
 
-    return articles
+            print(f"Collected {len(articles)} articles from {source_name}")
 
-# removing duplicates news
+            return articles
+
+        except httpx.HTTPError as error:
+
+            logging.warning(
+                f"{source_name} collection failed. "
+                f"Attempt {attempt}/{max_attempts}: {error}"
+            )
+
+            if attempt < max_attempts:
+                print(f"Retrying {source_name} in 5 seconds...")
+                time.sleep(5)
+
+            else:
+                logging.error(
+                    f"{source_name} collection failed after "
+                    f"{max_attempts} attempts."
+                )
+
+        except Exception:
+            logging.exception(
+                f"Unexpected error while collecting {source_name}"
+            )
+            raise
+
+    raise RuntimeError(
+        f"RSS collection failed for {source_name} "
+        f"after {max_attempts} attempts."
+    )
+
+
 def remove_duplicates(articles):
     unique_articles = []
     seen_urls = set()
@@ -54,7 +84,7 @@ def remove_duplicates(articles):
 
     return unique_articles
 
-# Data Cleaning and Normalization.
+
 def normalize_articles(articles):
     normalized_articles = []
 
@@ -72,7 +102,6 @@ def normalize_articles(articles):
             normalized_articles.append(normalized_article)
 
     return normalized_articles
-
 
 
 if __name__ == "__main__":
@@ -95,16 +124,17 @@ if __name__ == "__main__":
         all_news.extend(news)
 
     print("\nArticles before removing duplicates:", len(all_news))
+
     all_news = remove_duplicates(all_news)
+
     print("Articles after removing duplicates:", len(all_news))
 
     all_news = normalize_articles(all_news)
-    print("Valid articles after normalization:", len(all_news))
 
+    print("Valid articles after normalization:", len(all_news))
     print("\nTotal articles collected:", len(all_news))
 
     data_folder = Path(__file__).resolve().parent.parent / "data"
-
     data_folder.mkdir(parents=True, exist_ok=True)
 
     output_file = data_folder / "raw_news.json"
@@ -113,4 +143,3 @@ if __name__ == "__main__":
         json.dump(all_news, file, indent=4, ensure_ascii=False)
 
     print("News saved successfully at:", output_file)
-

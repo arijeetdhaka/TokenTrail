@@ -2,6 +2,8 @@
 import httpx
 import feedparser
 import json
+import time
+import logging
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -20,47 +22,75 @@ def collect_arxiv_papers(limit=10):
         "sortOrder": "descending"
     }
 
-    try:
-        response = httpx.get(
-            url,
-            params=params,
-            timeout=30
-        )
+    max_attempts = 3
 
-        response.raise_for_status()
+    for attempt in range(1, max_attempts + 1):
 
-        feed = feedparser.parse(response.content)
+        try:
+            response = httpx.get(
+                url,
+                params=params,
+                timeout=30
+            )
 
-        for entry in feed.entries:
+            response.raise_for_status()
 
-            paper = {
-                "title": entry.get("title", "").strip(),
-                "abstract": entry.get("summary", "").strip(),
-                "authors": [
-                    author.get("name", "")
-                    for author in entry.get("authors", [])
-                ],
-                "url": entry.get("id", ""),
-                "published_at": entry.get("published", ""),
-                "updated_at": entry.get("updated", ""),
-                "categories": [
-                    category.get("term", "")
-                    for category in entry.get("tags", [])
-                ],
-                "collected_at": datetime.now(timezone.utc).isoformat()
-            }
+            feed = feedparser.parse(response.content)
 
-            papers.append(paper)
+            if feed.bozo:
+                raise ValueError("Invalid or malformed arXiv feed response")
 
-        print("Collected research papers:", len(papers))
+            for entry in feed.entries:
 
-    except httpx.HTTPError as error:
-        print("arXiv API error:", error)
+                paper = {
+                    "title": entry.get("title", "").strip(),
+                    "abstract": entry.get("summary", "").strip(),
+                    "authors": [
+                        author.get("name", "")
+                        for author in entry.get("authors", [])
+                    ],
+                    "url": entry.get("id", ""),
+                    "published_at": entry.get("published", ""),
+                    "updated_at": entry.get("updated", ""),
+                    "categories": [
+                        category.get("term", "")
+                        for category in entry.get("tags", [])
+                    ],
+                    "collected_at": datetime.now(timezone.utc).isoformat()
+                }
 
-    except Exception as error:
-        print("Unexpected error:", error)
+                papers.append(paper)
 
-    return papers
+            print("Collected research papers:", len(papers))
+
+            return papers
+
+        except httpx.HTTPError as error:
+
+            logging.warning(
+                f"arXiv collection failed. "
+                f"Attempt {attempt}/{max_attempts}: {error}"
+            )
+
+        except ValueError as error:
+
+            logging.warning(
+                f"arXiv response error. "
+                f"Attempt {attempt}/{max_attempts}: {error}"
+            )
+
+        except Exception:
+            logging.exception("Unexpected error while collecting arXiv papers")
+            raise
+
+        if attempt < max_attempts:
+            print("Retrying arXiv collection in 5 seconds...")
+            time.sleep(5)
+
+    raise RuntimeError(
+        f"arXiv collection failed after {max_attempts} attempts."
+    )
+
 
 def remove_duplicate_papers(papers):
 
@@ -101,7 +131,6 @@ if __name__ == "__main__":
     print("Total unique papers:", len(papers))
 
     data_folder = Path(__file__).resolve().parent.parent / "data"
-
     data_folder.mkdir(parents=True, exist_ok=True)
 
     output_file = data_folder / "arxiv_papers.json"

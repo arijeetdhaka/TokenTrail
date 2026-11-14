@@ -1,11 +1,14 @@
 
 import httpx
 import json
+import time
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
 
 def collect_github_repositories(topic, limit=10):
+
     repositories = []
 
     url = "https://api.github.com/search/repositories"
@@ -17,41 +20,69 @@ def collect_github_repositories(topic, limit=10):
         "per_page": limit
     }
 
-    try:
-        response = httpx.get(
-            url,
-            params=params,
-            timeout=20,
-            headers={"Accept": "application/vnd.github+json"}
-        )
+    max_attempts = 3
 
-        response.raise_for_status()
+    for attempt in range(1, max_attempts + 1):
 
-        data = response.json()
+        try:
+            response = httpx.get(
+                url,
+                params=params,
+                timeout=20,
+                headers={"Accept": "application/vnd.github+json"}
+            )
 
-        for repo in data.get("items", []):
-            repository = {
-                "name": repo.get("full_name", ""),
-                "description": repo.get("description") or "",
-                "url": repo.get("html_url", ""),
-                "stars": repo.get("stargazers_count", 0),
-                "language": repo.get("language") or "",
-                "topics": repo.get("topics", []),
-                "updated_at": repo.get("updated_at", ""),
-                "collected_at": datetime.now(timezone.utc).isoformat()
-            }
+            response.raise_for_status()
 
-            repositories.append(repository)
+            data = response.json()
 
-        print(f"Collected {len(repositories)} repositories for {topic}")
+            for repo in data.get("items", []):
 
-    except httpx.HTTPError as error:
-        print(f"GitHub API error: {error}")
+                repository = {
+                    "name": repo.get("full_name", ""),
+                    "description": repo.get("description") or "",
+                    "url": repo.get("html_url", ""),
+                    "stars": repo.get("stargazers_count", 0),
+                    "language": repo.get("language") or "",
+                    "topics": repo.get("topics", []),
+                    "updated_at": repo.get("updated_at", ""),
+                    "collected_at": datetime.now(timezone.utc).isoformat()
+                }
 
-    except Exception as error:
-        print(f"Unexpected error: {error}")
+                repositories.append(repository)
 
-    return repositories
+            print(f"Collected {len(repositories)} repositories for {topic}")
+
+            return repositories
+
+        except httpx.HTTPError as error:
+
+            logging.warning(
+                f"GitHub collection failed for {topic}. "
+                f"Attempt {attempt}/{max_attempts}: {error}"
+            )
+
+            if attempt < max_attempts:
+                print(f"Retrying GitHub collection for {topic} in 5 seconds...")
+                time.sleep(5)
+
+            else:
+                logging.error(
+                    f"GitHub collection failed for {topic} "
+                    f"after {max_attempts} attempts."
+                )
+
+        except Exception:
+            logging.exception(
+                f"Unexpected error while collecting GitHub topic: {topic}"
+            )
+            raise
+
+    raise RuntimeError(
+        f"GitHub collection failed for {topic} "
+        f"after {max_attempts} attempts."
+    )
+
 
 def remove_duplicate_repositories(repositories):
 
@@ -67,8 +98,6 @@ def remove_duplicate_repositories(repositories):
             seen_names.add(name)
 
     return unique_repositories
-
-
 
 
 if __name__ == "__main__":
@@ -95,15 +124,12 @@ if __name__ == "__main__":
     print("\nRepositories before removing duplicates:",
           len(all_repositories))
 
-    all_repositories = remove_duplicate_repositories(
-        all_repositories
-    )
+    all_repositories = remove_duplicate_repositories(all_repositories)
 
     print("Repositories after removing duplicates:",
           len(all_repositories))
 
     data_folder = Path(__file__).resolve().parent.parent / "data"
-
     data_folder.mkdir(parents=True, exist_ok=True)
 
     output_file = data_folder / "github_repositories.json"

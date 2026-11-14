@@ -218,3 +218,29 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+automation/.venv/
+
+# Private environment variables
+automation/.env
+
+# Local logs
+automation/logs/*.log
+
+# Local automation data
+automation/data/
+
+# Private credentials
+automation/.env
+
+# Python environment
+automation/.venv/
+
+# Logs
+automation/logs/*.log
