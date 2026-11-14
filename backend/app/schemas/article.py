@@ -26,6 +26,7 @@ class ArticleListItem(BaseModel):
 
 
 class ArticleDetail(ArticleListItem):
+    raw_text: str | None
     takeaways: list[str] | None
     topics: list[TopicOut]
 
