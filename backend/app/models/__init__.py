@@ -8,3 +8,6 @@ from app.models.snippet import Snippet  # noqa: F401
 from app.models.explore_item import ExploreItem  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.user_progress import UserProgress  # noqa: F401
+from app.models.saved_article import SavedArticle  # noqa: F401
+from app.models.snippet_read import SnippetRead  # noqa: F401
+from app.models.explore_visit import ExploreVisit  # noqa: F401
