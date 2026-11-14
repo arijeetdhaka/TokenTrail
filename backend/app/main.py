@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
-from app.routers import articles, categories, topics, explore, snippets
+from app.routers import articles, categories, topics, explore, snippets, ingest
 
 app = FastAPI(title="TokenTrail API", version="0.1.0")
 
@@ -27,3 +27,4 @@ app.include_router(categories.router)
 app.include_router(topics.router)
 app.include_router(snippets.router)
 app.include_router(explore.router)
+app.include_router(ingest.router)
