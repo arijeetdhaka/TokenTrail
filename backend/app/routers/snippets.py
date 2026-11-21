@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -12,12 +14,20 @@ router = APIRouter(prefix="/snippets", tags=["snippets"])
 @router.get("", response_model=list[SnippetOut])
 def list_snippets(
     topic: str | None = None,
+    domain: str | None = None,
+    level: Literal["Beginner", "Intermediate", "Advanced"] | None = None,
     limit: int = Query(20, ge=1, le=50),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
     query = select(Snippet).options(selectinload(Snippet.topic))
-    if topic:
-        query = query.join(Topic).where(Topic.slug == topic)
-    query = query.order_by(Snippet.created_at.desc(), Snippet.id.desc()).offset(offset).limit(limit)
+    if topic or domain:
+        query = query.join(Topic)
+        if topic:
+            query = query.where(Topic.slug == topic)
+        if domain:
+            query = query.where(Topic.domain == domain)
+    if level:
+        query = query.where(Snippet.level == level)
+    query = query.order_by(Snippet.id).offset(offset).limit(limit)
     return db.scalars(query).all()

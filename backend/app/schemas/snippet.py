@@ -15,3 +15,6 @@ class SnippetOut(BaseModel):
     article_id: int | None
     topic: TopicOut | None
     created_at: datetime
+    summary: str | None
+    level: str | None
+    read_minutes: int | None
