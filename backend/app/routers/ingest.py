@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.schemas.classify import ClassifyBulkIn, ClassifyResult
+from app.services.classify import apply_classifications
 from app.core.security import require_ingest_key
 from app.db.database import get_db
 from app.schemas.ingest import ArticleBulkIn, BulkResult, ExploreBulkIn
@@ -21,3 +23,9 @@ def bulk_add_explore_items(payload: ExploreBulkIn, db: Session = Depends(get_db)
     inserted, skipped = ingest_explore_items(db, payload.items)
     db.commit()
     return BulkResult(received=len(payload.items), inserted=inserted, skipped=skipped)
+
+@router.post("/articles/classify/bulk", response_model=ClassifyResult)
+def bulk_classify_articles(payload: ClassifyBulkIn, db: Session = Depends(get_db)):
+    updated, errors = apply_classifications(db, payload.results)
+    db.commit()
+    return ClassifyResult(received=len(payload.results), updated=updated, failed=len(errors), errors=errors)
