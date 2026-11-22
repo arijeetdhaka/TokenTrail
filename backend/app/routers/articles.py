@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.database import get_db
@@ -16,10 +16,14 @@ def list_articles(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
+    unclassified: bool = False,
 ):
     query = select(Article)
     if category_id is not None:
         query = query.join(ArticleCategory).where(ArticleCategory.category_id == category_id)
+
+    if unclassified:
+        query = query.where(~exists().where(ArticleCategory.article_id == Article.id))
 
     if q:
         pattern = f"%{q}%"
