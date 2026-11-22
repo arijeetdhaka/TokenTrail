@@ -5,8 +5,9 @@ import re
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Article, ExploreItem, Source
+from app.models import Article, ExploreItem, Source, Topic
 from app.schemas.ingest import ArticleIn, ExploreItemIn
+from app.services.topic_matcher import match_topic
 
 SUMMARY_LIMIT = 400
 
@@ -84,6 +85,7 @@ def ingest_articles(db: Session, items: list[ArticleIn]) -> tuple[int, int]:
 def ingest_explore_items(db: Session, items: list[ExploreItemIn]) -> tuple[int, int]:
     urls = [item.url.strip() for item in items]
     seen_urls = set(db.scalars(select(ExploreItem.url).where(ExploreItem.url.in_(urls))))
+    topic_ids = dict(db.execute(select(Topic.slug, Topic.id)).all())
 
     inserted = skipped = 0
     for item in items:
@@ -91,12 +93,15 @@ def ingest_explore_items(db: Session, items: list[ExploreItemIn]) -> tuple[int, 
         if url in seen_urls:
             skipped += 1
             continue
+        name = clean_text(item.name)[:200]
+        description = clean_text(item.description) or None
         db.add(
             ExploreItem(
                 type=item.type,
-                name=clean_text(item.name)[:200],
-                description=clean_text(item.description) or None,
+                name=name,
+                description=description,
                 url=url,
+                topic_id=topic_ids.get(match_topic(name, description)),
             )
         )
         seen_urls.add(url)
